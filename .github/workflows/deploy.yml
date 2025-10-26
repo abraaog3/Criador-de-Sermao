@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+          # REMOVA A LINHA DO CACHE ← ESTA É A CORREÇÃO
 
       - name: Install dependencies
         run: npm install
