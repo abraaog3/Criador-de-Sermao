@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sermon Outline: The End that is Just the Beginning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              background: 'var(--color-background)',
+              surface: 'var(--color-surface)',
+              'text-primary': 'var(--color-text-primary)',
+              'text-secondary': 'var(--color-text-secondary)',
+              border: 'var(--color-border)',
+              
+              'primary-light': 'var(--color-primary-light)',
+              'primary-main': 'var(--color-primary-main)',
+              'primary-dark': 'var(--color-primary-dark)',
+              'primary-text': 'var(--color-primary-text)',
+
+              'accent-green-light': 'var(--color-accent-green-light)',
+              'accent-green-main': 'var(--color-accent-green-main)',
+              'accent-green-dark': 'var(--color-accent-green-dark)',
+              'accent-amber-light': 'var(--color-accent-amber-light)',
+              'accent-amber-main': 'var(--color-accent-amber-main)',
+              'accent-amber-dark': 'var(--color-accent-amber-dark)',
+            },
+            fontFamily: {
+              'sans': ['Inter', 'sans-serif'],
+              'serif': ['Lora', 'serif'],
+            },
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.20.0",
+    "pdfjs-dist/": "https://aistudiocdn.com/pdfjs-dist@^4.5.136/"
+  }
+}
+</script>
+<style>
+    @media print {
+      /* Oculta elementos de UI não relevantes para impressão */
+      header > div:first-child, /* Contêiner do seletor de tema */
+      main > section:first-of-type, /* SermonGeneratorForm */
+      .edit-controls, /* Wrapper para botões de edição/exportação */
+      footer {
+        display: none !important;
+      }
+
+      /* Redefine o layout do corpo e principal para impressão */
+      body {
+        background-color: #fff !important;
+        font-size: 11pt; /* Um bom tamanho para impressão */
+      }
+
+      main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+
+      /* Estilos de impressão universais: texto preto, sem fundos ou sombras */
+      * {
+        background-color: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+      
+      /* Garante que as bordas sejam visíveis, mas não coloridas */
+      .border, .border-b, .border-l-4, .border-b-2 {
+          border-color: #ccc !important;
+      }
+
+      /* Ajustes específicos de componentes */
+      .bg-surface, .bg-primary-light, .bg-accent-green-light, .bg-accent-amber-light {
+          border: 1px solid #ddd !important;
+      }
+
+      /* Evita quebras de elementos entre páginas */
+      h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+      }
+      section, div.bg-surface {
+        page-break-inside: avoid;
+      }
+      
+      /* Oculta ícones nos pontos do sermão */
+      .bg-primary-light.text-primary-main.rounded-full {
+          display: none !important;
+      }
+      
+      /* Garante que o título do cabeçalho permaneça proeminente */
+      header h1 {
+          font-size: 24pt !important;
+      }
+      header p {
+          font-size: 14pt !important;
+      }
+    }
+
+    /* Presentation Mode Styles */
+    .presentation-mode-active .presentation-content-wrapper {
+        max-width: 100vw;
+        margin: 0;
+        padding: 5rem 5vw; /* Increased vertical padding */
+        font-size: 1.4rem;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Vertically center the content */
+    }
+    .presentation-mode-active .presentation-content-wrapper h1 {
+        font-size: 3.5rem;
+    }
+    .presentation-mode-active .presentation-content-wrapper h2 {
+        font-size: 2.5rem;
+    }
+    .presentation-mode-active .presentation-content-wrapper ul {
+        padding-left: 1.5rem; /* Indents lists */
+    }
+    .presentation-mode-active .presentation-content-wrapper strong {
+        background-color: var(--color-accent-amber-main);
+        color: var(--color-background);
+        padding: 0.1em 0.4em;
+        border-radius: 0.3em;
+        font-weight: 600; /* Match Tailwind's 'font-semibold' */
+    }
+    .presentation-mode-active .hide-in-presentation {
+        display: none !important;
+    }
+  </style>
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
