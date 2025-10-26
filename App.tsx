@@ -93,6 +93,17 @@ interface ToolbarState {
   onComplete: (newText: string) => void;
 }
 
+// Helper function to get API key safely
+const getApiKey = (): string => {
+  // Try different ways to get the API key
+  if (process.env.API_KEY) return process.env.API_KEY;
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  
+  // For GitHub Pages, we'll use a different approach
+  // This will be set via GitHub Actions environment variable
+  return import.meta.env.VITE_GEMINI_API_KEY || '';
+};
+
 // Helper function to clean and parse JSON from the model's response
 const parseJsonResponse = (text: string) => {
     // The model sometimes wraps the JSON in ```json ... ```.
@@ -246,7 +257,12 @@ const App: React.FC = () => {
     if (!sourceSermonData) return null;
     setError(null);
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+        const apiKey = getApiKey();
+        if (!apiKey) {
+          throw new Error("Chave da API não configurada. Configure a VITE_GEMINI_API_KEY no GitHub.");
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
 
         const prompt = `
             Você é um assistente de pregação especializado em criar conteúdo visual para apresentações.
@@ -354,7 +370,12 @@ const App: React.FC = () => {
         setError(null);
         
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            const apiKey = getApiKey();
+            if (!apiKey) {
+              throw new Error("Chave da API não configurada. Configure a VITE_GEMINI_API_KEY no GitHub.");
+            }
+
+            const ai = new GoogleGenAI({ apiKey });
             let prompt = '';
             switch (action) {
                 case 'shorten':
@@ -396,7 +417,12 @@ const App: React.FC = () => {
     setCurrentPassage(passage);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        throw new Error("Chave da API não configurada. Configure a VITE_GEMINI_API_KEY no GitHub.");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       
       const systemInstruction = `Você é um teólogo e pregador Batista Reformado criando um esboço de sermão expositivo. Sua resposta DEVE ser um único objeto JSON que adere estritamente ao schema fornecido. NÃO inclua nenhum texto, markdown ou explicação fora do objeto JSON. O tom deve ser teologicamente robusto, claro e pastoral.`;
       
