@@ -2,9 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { SermonSection } from './components/SermonSection';
 import { SermonPoint } from './components/SermonPoint';
-import { SermonGeneratorForm } from './components/SermonGeneratorForm';
 import { TentIcon, BuildingIcon, DoveIcon, SaveIcon, DeleteIcon, CheckIcon, PresentationIcon } from './components/Icons';
-import { GoogleGenAI, Type } from "@google/genai";
 import { Book, bibleStructure as initialBibleStructure } from './data/bibleStructure';
 import { EditModeToggle } from './components/EditModeToggle';
 import { EditableField } from './components/EditableField';
@@ -19,66 +17,38 @@ const iconComponents = {
 };
 type IconName = keyof typeof iconComponents;
 
-const sermonSchema = {
-    type: Type.OBJECT,
-    properties: {
-        title: { type: Type.STRING, description: "O título principal e cativante do sermão. Deve ser memorável e refletir o tema central. Ex: 'Fugindo da Ira que Vem: O Juízo de Sodoma e a Salvação de Ló'." },
-        theme_and_subtitle: { type: Type.STRING, description: "O subtítulo que resume a tese ou a ideia central do sermão em uma única frase. Ex: 'O juízo de Deus, a misericórdia graciosa e o perigo do coração dividido'." },
-        context: {
-            type: Type.OBJECT,
-            properties: {
-                title: { type: Type.STRING, description: "Título para a seção de contexto. Ex: 'O Palco para o Juízo Divino'." },
-                content: { type: Type.STRING, description: "Um parágrafo explicando o contexto da passagem, preparando o cenário para a mensagem. Use **texto** para enfatizar." },
-            },
-            required: ['title', 'content'],
-        },
-        introduction: {
-            type: Type.OBJECT,
-            properties: {
-                title: { type: Type.STRING, description: "O título para a introdução. Ex: 'O Coração Dividido e a Misericórdia Divina'." },
-                hook: { type: Type.STRING, description: "Um 'gancho' para capturar a atenção, começando com 'Gancho:'. Pode ser uma pergunta ou declaração intrigante para conectar a audiência ao tema. Ex: 'Gancho: Já se perguntou se suas escolhas podem levá-lo para mais perto do perigo ou para mais longe da segurança?'" },
-            },
-            required: ['title', 'hook'],
-        },
-        development: {
-            type: Type.ARRAY,
-            description: "A lista de pontos principais do sermão. Deve haver entre 2 a 4 pontos.",
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    point: { type: Type.INTEGER, description: "O número do ponto (1, 2, 3...)." },
-                    title: { type: Type.STRING, description: "O título do ponto, incluindo a referência bíblica. Ex: 'PONTO 1: O Juízo Anunciado: A Urgência da Saída (Gênesis 19:12-14)'." },
-                    icon: { type: Type.STRING, enum: ['TentIcon', 'BuildingIcon', 'DoveIcon'], description: "Nome do ícone para representar visualmente o ponto." },
-                    argument: { type: Type.STRING, description: "A declaração principal ou argumento deste ponto, resumindo sua ideia central." },
-                    subsections: {
-                        type: Type.ARRAY,
-                        description: "Uma lista de subseções que detalham o argumento do ponto.",
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                title: { type: Type.STRING, description: "O título da subseção, frequentemente incluindo versículos. Ex: 'A Ordem de Deus: A Urgência da Saída (v. 12-13)'." },
-                                content: { type: Type.STRING, description: "O conteúdo da subseção, formatado como uma lista de sentenças curtas e diretas. Cada sentença DEVE começar em uma nova linha, sem marcadores como '-'. O modo de apresentação irá formatar isso como uma lista de tópicos. Use **texto** para enfatizar palavras-chave." },
-                            },
-                            required: ['title', 'content'],
-                        }
-                    },
-                    application: { type: Type.STRING, description: "Uma aplicação pastoral prática e direta para a vida dos ouvintes, baseada neste ponto." },
-                },
-                required: ['point', 'title', 'icon', 'argument', 'subsections', 'application'],
-            },
-        },
-        conclusion: {
-            type: Type.OBJECT,
-            properties: {
-                title: { type: Type.STRING, description: "O título para a conclusão. Ex: 'Conclusão: Uma Decisão de Vida ou Morte'." },
-                recap: { type: Type.STRING, description: "Uma breve recapitulação dos pontos principais do sermão." },
-                appealToBelievers: { type: Type.STRING, description: "Um apelo aos crentes, com encorajamento e exortação. Use **texto** para enfatizar." },
-                appealToUnbelievers: { type: Type.STRING, description: "Um apelo evangelístico direcionado aos não-crentes." },
-            },
-            required: ['title', 'recap', 'appealToBelievers', 'appealToUnbelievers'],
-        },
-    },
-    required: ['title', 'theme_and_subtitle', 'context', 'introduction', 'development', 'conclusion'],
+const emptySermon = {
+  title: "Novo Sermão",
+  theme_and_subtitle: "Adicione o tema e subtítulo aqui",
+  context: {
+    title: "Contexto",
+    content: "Descreva o contexto bíblico aqui."
+  },
+  introduction: {
+    title: "Introdução",
+    hook: "Gancho: Adicione um gancho impactante aqui."
+  },
+  development: [
+    {
+      point: 1,
+      title: "PONTO 1: Título do primeiro ponto",
+      icon: "TentIcon",
+      argument: "Argumento principal deste ponto.",
+      subsections: [
+        {
+          title: "Subseção 1",
+          content: "Conteúdo da primeira subseção."
+        }
+      ],
+      application: "Aplicação prática para a vida."
+    }
+  ],
+  conclusion: {
+    title: "Conclusão",
+    recap: "Recapitulação dos pontos principais.",
+    appealToBelievers: "Apelo direcionado aos crentes.",
+    appealToUnbelievers: "Apelo evangelístico."
+  }
 };
 
 const JSONBIN_URL = "https://api.jsonbin.io/v3/b/68fd64e4ae596e708f2cb845";
@@ -93,46 +63,10 @@ interface ToolbarState {
   onComplete: (newText: string) => void;
 }
 
-// Helper function to get API key safely
-const getApiKey = (): string => {
-  // Try different ways to get the API key
-  if (process.env.API_KEY) return process.env.API_KEY;
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  
-  // For GitHub Pages, we'll use a different approach
-  // This will be set via GitHub Actions environment variable
-  return import.meta.env.VITE_GEMINI_API_KEY || '';
-};
-
-// Helper function to clean and parse JSON from the model's response
-const parseJsonResponse = (text: string) => {
-    // The model sometimes wraps the JSON in ```json ... ```.
-    const cleanedText = text.replace(/^```json\s*/, '').replace(/```$/, '').trim();
-    try {
-        return JSON.parse(cleanedText);
-    } catch (e) {
-        console.error("Failed to parse JSON:", e);
-        console.error("Original text from API:", text);
-        // Attempt to find a JSON object within the string if it's not perfectly formatted
-        const jsonMatch = cleanedText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-        if (jsonMatch) {
-            try {
-                return JSON.parse(jsonMatch[0]);
-            } catch (e2) {
-                console.error("Failed to parse extracted JSON:", e2);
-            }
-        }
-        // If all else fails, throw an error.
-        throw new Error("A resposta da IA não estava no formato JSON esperado. Por favor, tente novamente.");
-    }
-};
-
 const App: React.FC = () => {
   const [sermonData, setSermonData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bibleData] = useState<Book[]>(initialBibleStructure);
-  const [progress, setProgress] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPassage, setCurrentPassage] = useState('');
 
@@ -189,40 +123,6 @@ const App: React.FC = () => {
     fetchSavedSermons();
   }, [fetchSavedSermons]);
 
-
-  useEffect(() => {
-    let animationFrameId: number;
-    let startTime: number;
-    // The total generation time is about 2-3 minutes.
-    // Let's make the progress to 95% take 80 seconds (1 minute and 20 seconds).
-    const DURATION_TO_95_PERCENT = 80 * 1000; 
-
-    const updateProgress = (timestamp: number) => {
-      if (!startTime) {
-        startTime = timestamp;
-      }
-      const elapsedTime = timestamp - startTime;
-      const progressValue = Math.min((elapsedTime / DURATION_TO_95_PERCENT) * 95, 95);
-
-      setProgress(progressValue);
-
-      if (progressValue < 95) {
-        animationFrameId = requestAnimationFrame(updateProgress);
-      }
-    };
-
-    if (isLoading) {
-      setProgress(0); // Start at 0
-      animationFrameId = requestAnimationFrame(updateProgress);
-    }
-
-    return () => {
-      if(animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-    };
-  }, [isLoading]);
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isPresentationMode) {
@@ -252,52 +152,13 @@ const App: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [toolbarState.visible]);
-  
-  const generatePresentationData = useCallback(async (sourceSermonData: any) => {
-    if (!sourceSermonData) return null;
-    setError(null);
-    try {
-        const apiKey = getApiKey();
-        if (!apiKey) {
-          throw new Error("Chave da API não configurada. Configure a VITE_GEMINI_API_KEY no GitHub.");
-        }
 
-        const ai = new GoogleGenAI({ apiKey });
-
-        const prompt = `
-            Você é um assistente de pregação especializado em criar conteúdo visual para apresentações.
-            Sua tarefa é converter um esboço de sermão detalhado, fornecido em formato JSON, em uma versão otimizada para slides.
-            Para CADA campo de texto no JSON de entrada que contém conteúdo do sermão (como 'content', 'hook', 'argument', 'subsections.content', 'application', 'recap', etc.), você deve seguir estas regras:
-            1. Analise o parágrafo ou texto original.
-            2. Extraia as ideias principais.
-            3. Reescreva essas ideias como uma lista de sentenças curtas, assertivas e independentes.
-            4. Cada sentença deve ter entre 5 e 10 palavras.
-            5. Para enfatizar palavras-chave ou conceitos teológicos importantes, envolva-os com asteriscos duplos (ex: **graça**). Use isso para destacar os termos mais significativos.
-            6. O resultado para cada campo deve ser uma ÚNICA STRING, com cada sentença separada por um caractere de nova linha ('\\n').
-            IMPORTANTE:
-            - O JSON de saída deve ter EXATAMENTE a mesma estrutura, chaves e hierarquia do JSON de entrada.
-            - Altere APENAS os valores dos campos de texto conforme as regras acima.
-            - Campos que já são títulos curtos (como 'title') podem permanecer inalterados.
-            - A resposta DEVE ser um objeto JSON válido, sem nenhum texto ou markdown adicional ao redor dele.
-        `;
-
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash", // Use a faster model for this task
-            contents: `${prompt}\n\nJSON de Entrada:\n${JSON.stringify(sourceSermonData)}`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: sermonSchema,
-            },
-        });
-
-        return parseJsonResponse(response.text);
-    } catch (e) {
-        console.error(e);
-        const errorMessage = e instanceof Error ? e.message : "Não foi possível gerar o modo de apresentação.";
-        setError(errorMessage);
-        return null;
-    }
-  }, []);
+  const handleCreateNewSermon = () => {
+    setSermonData(emptySermon);
+    setPresentationData(null);
+    setIsEditing(true);
+    setCurrentPassage("Novo Sermão");
+  };
 
   const handleSermonDataChange = (path: (string | number)[], value: string) => {
     if (debounceTimerRef.current) {
@@ -313,15 +174,6 @@ const App: React.FC = () => {
       current[path[path.length - 1]] = value;
       
       setPresentationData(null); 
-
-      debounceTimerRef.current = window.setTimeout(async () => {
-        if (isGeneratingRef.current) return; // Don't start if another generation is active
-        
-        setIsPreGenerating(true);
-        const presData = await generatePresentationData(newData);
-        setPresentationData(presData);
-        setIsPreGenerating(false);
-      }, 2000); // 2-second debounce
 
       return newData;
     });
@@ -370,31 +222,25 @@ const App: React.FC = () => {
         setError(null);
         
         try {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-              throw new Error("Chave da API não configurada. Configure a VITE_GEMINI_API_KEY no GitHub.");
-            }
-
-            const ai = new GoogleGenAI({ apiKey });
-            let prompt = '';
+            // Para as ações de IA, agora vamos usar uma implementação simples
+            // já que removemos a API da Gemini
+            let newText = selectedText;
+            
             switch (action) {
                 case 'shorten':
-                    prompt = `Encurte o seguinte texto, mantendo a ideia principal: "${selectedText}"`;
+                    newText = selectedText.split('.').slice(0, 2).join('.') + '.';
                     break;
                 case 'lengthen':
-                    prompt = `Alongue o seguinte texto, adicionando detalhes e expandindo as ideias, mas mantendo o mesmo sentido: "${selectedText}"`;
+                    newText = selectedText + ' Desenvolva mais este pensamento.';
                     break;
                 case 'rephrase':
-                    prompt = `Reescreva o seguinte texto como uma série de sentenças curtas e assertivas: "${selectedText}"`;
+                    newText = selectedText.split('.')
+                        .map(sentence => sentence.trim())
+                        .filter(sentence => sentence)
+                        .join('\n');
                     break;
             }
 
-            const response = await ai.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: prompt,
-            });
-
-            const newText = response.text.trim();
             // Replace only the first occurrence to avoid unintended changes
             const newFullText = originalFullText.replace(selectedText, newText);
             onComplete(newFullText);
@@ -406,63 +252,6 @@ const App: React.FC = () => {
             setIsAiEditing(false);
         }
     };
-
-
-  const handleGenerateSermon = async (passage: string, pdfText: string | null) => {
-    setIsLoading(true);
-    setError(null);
-    setSermonData(null);
-    setPresentationData(null); // Clear any old presentation data
-    setIsEditing(false);
-    setCurrentPassage(passage);
-
-    try {
-      const apiKey = getApiKey();
-      if (!apiKey) {
-        throw new Error("Chave da API não configurada. Configure a VITE_GEMINI_API_KEY no GitHub.");
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const systemInstruction = `Você é um teólogo e pregador Batista Reformado criando um esboço de sermão expositivo. Sua resposta DEVE ser um único objeto JSON que adere estritamente ao schema fornecido. NÃO inclua nenhum texto, markdown ou explicação fora do objeto JSON. O tom deve ser teologicamente robusto, claro e pastoral.`;
-      
-      let prompt = `Gere um sermão expositivo sobre a passagem: ${passage}.`;
-
-      if (pdfText) {
-        // Truncate PDF text to a safer length to prevent model confusion
-        const truncatedPdfText = pdfText.substring(0, 8000);
-        prompt += `\n\nUse o seguinte documento como inspiração teológica. Integre seus conceitos onde for pertinente, mas foque na passagem bíblica fornecida. O documento é apenas um material de apoio.\n\n--- INÍCIO DO DOCUMENTO ---\n${truncatedPdfText}\n--- FIM DO DOCUMENTO ---`;
-      }
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: prompt,
-        config: {
-          systemInstruction: systemInstruction,
-          responseMimeType: "application/json",
-          responseSchema: sermonSchema,
-          temperature: 0.5,
-          thinkingConfig: { thinkingBudget: 32768 },
-        },
-      });
-      
-      const sermonJson = parseJsonResponse(response.text);
-      
-      setProgress(100);
-      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for 0.5s to show 100%
-      setSermonData(sermonJson);
-      setSaveSuccess(false);
-
-    } catch (e) {
-      console.error(e);
-      const errorMessage = e instanceof Error ? e.message : "Não foi possível gerar o esboço. Verifique a passagem bíblica ou tente novamente mais tarde.";
-      setError(errorMessage);
-      setSermonData(null); 
-    } finally {
-      setIsLoading(false);
-      setProgress(0);
-    }
-  };
 
   const handleEnterPresentationMode = async () => {
     if (!sermonData || isGeneratingRef.current) return;
@@ -479,16 +268,90 @@ const App: React.FC = () => {
         return;
     }
 
-    // Otherwise, generate it on-demand.
+    // For presentation mode, we'll use the original data formatted for presentation
     setIsGeneratingPresentation(true);
-    const presData = await generatePresentationData(sermonData);
-    if (presData) {
-        setPresentationData(presData);
-    }
-    setIsPresentationMode(true); // Enter presentation mode even if generation fails
+    
+    // Simple formatting for presentation mode - split content into bullet points
+    const formatForPresentation = (data: any) => {
+      const formatted = JSON.parse(JSON.stringify(data));
+      
+      // Format context content
+      if (formatted.context?.content) {
+        formatted.context.content = formatted.context.content
+          .split('.')
+          .filter((s: string) => s.trim())
+          .map((s: string) => s.trim() + '.')
+          .join('\n');
+      }
+      
+      // Format development points
+      if (formatted.development) {
+        formatted.development.forEach((point: any) => {
+          if (point.argument) {
+            point.argument = point.argument
+              .split('.')
+              .filter((s: string) => s.trim())
+              .map((s: string) => s.trim() + '.')
+              .join('\n');
+          }
+          
+          if (point.subsections) {
+            point.subsections.forEach((subsection: any) => {
+              if (subsection.content) {
+                subsection.content = subsection.content
+                  .split('.')
+                  .filter((s: string) => s.trim())
+                  .map((s: string) => s.trim() + '.')
+                  .join('\n');
+              }
+            });
+          }
+          
+          if (point.application) {
+            point.application = point.application
+              .split('.')
+              .filter((s: string) => s.trim())
+              .map((s: string) => s.trim() + '.')
+              .join('\n');
+          }
+        });
+      }
+      
+      // Format conclusion
+      if (formatted.conclusion) {
+        if (formatted.conclusion.recap) {
+          formatted.conclusion.recap = formatted.conclusion.recap
+            .split('.')
+            .filter((s: string) => s.trim())
+            .map((s: string) => s.trim() + '.')
+            .join('\n');
+        }
+        
+        if (formatted.conclusion.appealToBelievers) {
+          formatted.conclusion.appealToBelievers = formatted.conclusion.appealToBelievers
+            .split('.')
+            .filter((s: string) => s.trim())
+            .map((s: string) => s.trim() + '.')
+            .join('\n');
+        }
+        
+        if (formatted.conclusion.appealToUnbelievers) {
+          formatted.conclusion.appealToUnbelievers = formatted.conclusion.appealToUnbelievers
+            .split('.')
+            .filter((s: string) => s.trim())
+            .map((s: string) => s.trim() + '.')
+            .join('\n');
+        }
+      }
+      
+      return formatted;
+    };
+    
+    const presData = formatForPresentation(sermonData);
+    setPresentationData(presData);
+    setIsPresentationMode(true);
     setIsGeneratingPresentation(false);
   };
-
 
   const handleSaveSermon = async () => {
     if (!sermonData || !currentPassage) return;
@@ -540,7 +403,6 @@ const App: React.FC = () => {
       setIsSaving(false);
     }
   };
-
 
   const handleDeleteSermon = async (sermonId: number) => {
     const previousSermons = [...savedSermons];
@@ -608,21 +470,26 @@ const App: React.FC = () => {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 presentation-content-wrapper">
         <div className="hide-in-presentation">
             <Header 
-              themeAndSubtitle={sermonData?.theme_and_subtitle || "Gere um novo esboço de sermão abaixo."}
+              themeAndSubtitle={sermonData?.theme_and_subtitle || "Crie ou carregue um sermão para começar"}
               isEditing={isEditing}
               onUpdate={handleSermonDataChange}
             />
         </div>
         
-        <div className="hide-in-presentation">
-          <SermonGeneratorForm 
-              onGenerate={handleGenerateSermon} 
-              isLoading={isLoading} 
-              error={error}
-              bibleData={bibleData}
-          />
+        {/* BOTÃO PARA CRIAR NOVO SERMÃO - AGORA MAIS PRÓXIMO DO TOPO */}
+        <div className="hide-in-presentation my-8 text-center">
+          <button
+            onClick={handleCreateNewSermon}
+            className="bg-primary-main text-white px-6 py-3 rounded-lg font-sans font-semibold text-lg hover:bg-primary-dark transition-colors"
+          >
+            ✨ Criar Novo Sermão
+          </button>
+          <p className="text-text-secondary mt-2">
+            Comece um sermão do zero e edite manualmente
+          </p>
         </div>
         
+        {/* LISTA DE SERMÕES SALVOS */}
         <section className="my-12 hide-in-presentation">
           <h2 className="font-sans font-bold text-3xl text-primary-dark border-b border-border pb-3 mb-6">
             Meus Sermões Salvos
@@ -661,30 +528,9 @@ const App: React.FC = () => {
             )
           )}
         </section>
-
-        {isLoading && (
-          <div className="text-center my-12 transition-opacity duration-300">
-            <p className="font-sans text-lg text-text-secondary mb-3">
-                Gerando esboço, por favor aguarde...
-            </p>
-            <div className="w-full max-w-md mx-auto bg-surface rounded-full h-2.5 border border-border">
-                <div
-                    className="bg-primary-main h-2.5 rounded-full transition-all duration-100 ease-linear"
-                    style={{ width: `${progress}%` }}
-                    aria-valuenow={progress}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    role="progressbar"
-                    aria-label="Progresso da geração do sermão"
-                ></div>
-            </div>
-            <p className="font-sans font-semibold text-xl text-primary-dark mt-3">
-                {Math.round(progress)}%
-            </p>
-          </div>
-        )}
         
-        {data && !isLoading && (
+        {/* EDITOR DE SERMÃO (APARECE QUANDO UM SERMÃO ESTÁ CARREGADO) */}
+        {data && (
           <>
             <div className="flex justify-end items-center gap-4 mb-4 edit-controls hide-in-presentation">
               <div className="relative flex items-center">
@@ -854,7 +700,7 @@ const App: React.FC = () => {
         )}
 
         <footer className="text-center mt-16 text-text-secondary text-sm hide-in-presentation">
-            <p>Esboço de Pregação Digital Gerado por IA</p>
+            <p>Editor de Esboço de Pregação Digital</p>
             <p>&copy; {new Date().getFullYear()}</p>
         </footer>
 
