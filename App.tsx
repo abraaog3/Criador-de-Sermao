@@ -63,6 +63,9 @@ interface ToolbarState {
   onComplete: (newText: string) => void;
 }
 
+// Tipos para os modos de visualização
+type ViewMode = 'mobile' | 'tablet' | 'desktop';
+
 const App: React.FC = () => {
   const [sermonData, setSermonData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +91,9 @@ const App: React.FC = () => {
     visible: false, top: 0, left: 0, originalFullText: '', selectedText: '', onComplete: () => {}
   });
   const [isAiEditing, setIsAiEditing] = useState(false);
+
+  // Novo estado para o modo de visualização
+  const [viewMode, setViewMode] = useState<ViewMode>('desktop');
 
   useEffect(() => {
     isGeneratingRef.current = isGeneratingPresentation;
@@ -426,7 +432,7 @@ const App: React.FC = () => {
   const isBusyGenerating = isGeneratingPresentation;
 
   return (
-    <div className="bg-background min-h-screen font-serif text-text-primary">
+    <div className={`bg-background min-h-screen font-serif text-text-primary ${viewMode}-view`}>
       {isPresentationMode && data && (
         <SermonTimer 
           sermonData={data}
@@ -456,7 +462,36 @@ const App: React.FC = () => {
         </div>
       )}
       
-      <main className="max-w-5xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8 lg:py-12 presentation-content-wrapper">
+      <main className={`max-w-5xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8 lg:py-12 presentation-content-wrapper ${viewMode}-content`}>
+        
+        {/* BOTÕES DE VISUALIZAÇÃO MOBILE/TABLET/DESKTOP */}
+        {data && !isPresentationMode && (
+          <div className="view-mode-selector hide-in-presentation mb-6">
+            <div className="flex justify-center gap-2 bg-surface p-3 rounded-lg border border-border">
+              <button 
+                className={`view-mode-btn ${viewMode === 'mobile' ? 'active' : ''}`}
+                onClick={() => setViewMode('mobile')}
+              >
+                <span className="text-lg">📱</span>
+                <span className="hidden sm:inline">Mobile</span>
+              </button>
+              <button 
+                className={`view-mode-btn ${viewMode === 'tablet' ? 'active' : ''}`}
+                onClick={() => setViewMode('tablet')}
+              >
+                <span className="text-lg">📟</span>
+                <span className="hidden sm:inline">Tablet</span>
+              </button>
+              <button 
+                className={`view-mode-btn ${viewMode === 'desktop' ? 'active' : ''}`}
+                onClick={() => setViewMode('desktop')}
+              >
+                <span className="text-lg">💻</span>
+                <span className="hidden sm:inline">Desktop</span>
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* HEADER */}
         <div className="hide-in-presentation">
@@ -731,6 +766,74 @@ const App: React.FC = () => {
           <p>&copy; {new Date().getFullYear()}</p>
         </footer>
       </main>
+
+      <style>{`
+        /* Estilos para os botões de visualização */
+        .view-mode-btn {
+          padding: 8px 16px;
+          border: 2px solid #e2e8f0;
+          background: white;
+          color: #4a5568;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 14px;
+        }
+
+        .view-mode-btn:hover {
+          background: #f7fafc;
+          border-color: #cbd5e0;
+        }
+
+        .view-mode-btn.active {
+          background: #2c3e50;
+          border-color: #2c3e50;
+          color: white;
+        }
+
+        /* Estilos para diferentes modos de visualização */
+        .mobile-view .presentation-content-wrapper {
+          max-width: 360px !important;
+          margin: 0 auto;
+        }
+
+        .tablet-view .presentation-content-wrapper {
+          max-width: 768px !important;
+          margin: 0 auto;
+        }
+
+        .desktop-view .presentation-content-wrapper {
+          max-width: 1024px !important;
+          margin: 0 auto;
+        }
+
+        /* Ajustes específicos para mobile */
+        .mobile-view .sermon-content h1 {
+          font-size: 1.5rem !important;
+        }
+
+        .mobile-view .sermon-content p {
+          font-size: 0.875rem !important;
+        }
+
+        .mobile-view .edit-controls {
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        /* Ajustes específicos para tablet */
+        .tablet-view .sermon-content h1 {
+          font-size: 2rem !important;
+        }
+
+        .tablet-view .sermon-content p {
+          font-size: 1rem !important;
+        }
+      `}</style>
     </div>
   );
 };
